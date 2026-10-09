@@ -367,22 +367,33 @@ def neutralize(client: Client, v: dict, motion: dict, a: float, b: float) -> Non
             q = path.split(".")
             v["shots"][int(q[1])]["beats"][int(q[3])]["participants"][int(q[5])]["action"] = val
 
-def focus_window_pro(v: dict, dur: float):
+def focus_window_pro(v: dict, dur: float, top_n: int = 3):
+    """Top-N non-overlapping high-risk motion intervals (generic, not per-video)."""
     proxy = {"shots": [{"actions": [{"start": b["start"], "end": b["end"],
         "description": " ".join(str(p.get("action") or "") + " " + str(p.get("motion") or "") for p in b["participants"])}
         for b in s["beats"]]} for s in v["shots"]]}
     acts = [x for s in proxy["shots"] for x in s["actions"]]
-    ranked = [(len(CAUSAL_WORDS.findall(x["description"])), i, x) for i, x in enumerate(acts)]
-    _, _, act = max(ranked, key=lambda t: (t[0], t[1]))
-    a = max(0.0, float(act["start"]) - .75)
-    b = min(dur, float(act["end"]) + .25)
-    if b - a > 4.0:
-        b = min(dur, a + 4.0)
-    return round(a, 3), round(b, 3)
+    ranked = sorted(
+        ((len(CAUSAL_WORDS.findall(x["description"])), float(x["end"]) - float(x["start"]), i, x)
+         for i, x in enumerate(acts)),
+        key=lambda t: (t[0], t[1], t[2]), reverse=True)
+    wins: list[tuple[float, float]] = []
+    for _, _, _, act in ranked:
+        if len(wins) >= top_n:
+            break
+        a = max(0.0, float(act["start"]) - .75)
+        b = min(dur, float(act["end"]) + .25)
+        if b - a > 4.0:
+            b = min(dur, a + 4.0)
+        a, b = round(a, 3), round(b, 3)
+        if all(b <= w[0] + .3 or a >= w[1] - .3 for w in wins):
+            wins.append((a, b))
+    wins.sort()
+    return wins or [(0.0, min(dur, 4.0))]
 
 def focused_frames(video: Path, d: Path, a: float, b: float) -> list[dict]:
     fd = d / "focus_frames"
-    fd.mkdir(exist_ok=True)
+    fd.mkdir(parents=True, exist_ok=True)
     n = min(17, max(5, math.ceil((b - a) / .25) + 1))
     out = []
     for i in range(n):
@@ -533,21 +544,27 @@ def main():
          {"type": "video_url", "video_url": {"url": data_url(video, mime)}}], max_tokens=10000)
     validate_pro(initial, src["duration_seconds"])
     wjson(prodir / "analysis.initial.json", initial)
-    fs, fe = focus_window_pro(initial, src["duration_seconds"])
-    print(f"focus window: {fs}-{fe}s", flush=True)
-    dense = focused_frames(video, prodir, fs, fe)
-    mr = [{"type": "text", "text": "Independently inspect these ORDERED dense original video frames ONLY. Do not infer from a prior narrative. Focus on exact direction of motion, who carries what, whether a body/object visibly contacts another, and what visibly precedes a fall or change of direction. If contact or a causal mechanism is not directly visible, mark causal_link='unconfirmed' and supported_causal_action=null. Temporal sequence alone never proves causation. Return JSON only: {\"observations\":[{\"timestamp\":number,\"description\":string}],\"contact\":\"observed|not_observed|unclear\",\"causal_link\":\"observed|unconfirmed\",\"supported_causal_action\":null,\"uncertainties\":[string]}. Video seconds " + str(fs) + "–" + str(fe) + "."}]
-    for f in dense:
-        mr += [{"type": "text", "text": f"Dense original frame at {f['timestamp']} seconds"},
-               {"type": "image_url", "image_url": {"url": data_url(Path(f["path"]), "image/png")}}]
-    motion = client.call("motion_review", mr, max_tokens=4500)
-    if (not isinstance(motion.get("observations"), list)
-            or motion.get("contact") not in ("observed", "not_observed", "unclear")
-            or motion.get("causal_link") not in ("observed", "unconfirmed")):
-        raise ValueError("Invalid PRO motion review")
-    if motion["causal_link"] == "observed" and not motion.get("supported_causal_action"):
-        raise ValueError("Observed causal link lacks an identified action")
-    wjson(prodir / "motion_review.json", motion)
+    fs_list = focus_window_pro(initial, src["duration_seconds"])
+    print(f"focus windows: {fs_list}", flush=True)
+    motions: list[dict] = []
+    for wi, (fs, fe) in enumerate(fs_list):
+        dense = focused_frames(video, prodir / f"focus_{wi}", fs, fe)
+        mr = [{"type": "text", "text": "Independently inspect these ORDERED dense original video frames ONLY. Do not infer from a prior narrative. Focus on exact direction of motion, who carries what, whether a body/object visibly contacts another, and what visibly precedes a fall or change of direction. If contact or a causal mechanism is not directly visible, mark causal_link='unconfirmed' and supported_causal_action=null. Temporal sequence alone never proves causation. Return JSON only: {\"observations\":[{\"timestamp\":number,\"description\":string}],\"contact\":\"observed|not_observed|unclear\",\"causal_link\":\"observed|unconfirmed\",\"supported_causal_action\":null,\"uncertainties\":[string]}. Video seconds " + str(fs) + "–" + str(fe) + "."}]
+        for f in dense:
+            mr += [{"type": "text", "text": f"Dense original frame at {f['timestamp']} seconds"},
+                   {"type": "image_url", "image_url": {"url": data_url(Path(f["path"]), "image/png")}}]
+        m = client.call(f"motion_review_{wi}", mr, max_tokens=4500)
+        if (not isinstance(m.get("observations"), list)
+                or m.get("contact") not in ("observed", "not_observed", "unclear")
+                or m.get("causal_link") not in ("observed", "unconfirmed")):
+            raise ValueError("Invalid PRO motion review")
+        if m["causal_link"] == "observed" and not m.get("supported_causal_action"):
+            raise ValueError("Observed causal link lacks an identified action")
+        m["focus_window"] = [fs, fe]
+        motions.append(m)
+    wjson(prodir / "motion_review.json", motions)
+    motion = motions[0]
+    confirmed_all = all(m["causal_link"] == "observed" for m in motions)
     sparse = select_frames(src, initial)
     er = [{"type": "text", "text": "Independently inspect these sparse ORIGINAL frames across the whole video. Report only DIRECTLY VISIBLE facial expression/gaze changes, per person and time interval. If face is too small, turned away or obscured, use null for visible_expression and inferred_emotion. Do not infer emotion from the story or motion alone. Do not make claims about audio, dialogue, contact or causality. Return JSON only: {\"person_expressions\":[{\"person_description\":\"\",\"start\":0,\"end\":1,\"visible_expression\":null,\"inferred_emotion\":null,\"evidence_timestamps\":[]}],\"uncertainties\":[]}."}]
     for f in sparse:
@@ -557,24 +574,26 @@ def main():
     if not isinstance(expr.get("person_expressions"), list):
         raise ValueError("Invalid PRO expression review")
     wjson(prodir / "expression_review.json", expr)
-    analysis = client.call("reconcile", PRO_ANALYSIS + "\nReconcile the whole-video draft with two INDEPENDENT reviews. Use frames to correct conflicts, but preserve unaffected chronology. Keep stable character IDs, shot IDs, full beat coverage, and per-character expression fields. MOTION review takes precedence for action causality; EXPRESSION review only supports facial expressions. If motion_review.causal_link is unconfirmed, remove every specific causal action or takedown from story, subject, beats and negatives. No observed contact is not proof that contact never happened between frames. Never assert a cause from mere temporal proximity. Optional user text is unverified and never overrides video. Return the same full JSON schema.\n" + json.dumps({"draft": initial, "motion_review": motion, "expression_review": expr, "focus_window": [fs, fe], "optional_user_text": ""}, ensure_ascii=False), compiler=True, max_tokens=10000)
+    analysis = client.call("reconcile", PRO_ANALYSIS + "\nReconcile the whole-video draft with INDEPENDENT reviews. Use frames to correct conflicts, but preserve unaffected chronology. Keep stable character IDs, shot IDs, full beat coverage (beat count must only grow, never merge), and per-character expression fields. MOTION reviews take precedence for action causality; EXPRESSION review only supports facial expressions. If any motion review causal_link is unconfirmed, remove every specific causal action or takedown from story, subject, beats and negatives for its window. No observed contact is not proof that contact never happened between frames. Never assert a cause from mere temporal proximity. Optional user text is unverified and never overrides video. Return the same full JSON schema.\n" + json.dumps({"draft": initial, "motion_reviews": motions, "expression_review": expr, "focus_windows": fs_list, "optional_user_text": ""}, ensure_ascii=False), compiler=True, max_tokens=10000)
     validate_pro(analysis, src["duration_seconds"])
-    try:
-        clean_analysis(analysis, fs, fe, motion["causal_link"] == "observed", expr)
-    except ValueError:
-        neutralize(client, analysis, motion, fs, fe)
-        clean_analysis(analysis, fs, fe, motion["causal_link"] == "observed", expr)
+    for (fs, fe), m in zip(fs_list, motions):
+        try:
+            clean_analysis(analysis, fs, fe, m["causal_link"] == "observed", expr)
+        except ValueError:
+            neutralize(client, analysis, m, fs, fe)
+            clean_analysis(analysis, fs, fe, m["causal_link"] == "observed", expr)
     validate_pro(analysis, src["duration_seconds"])
-    story = client.call("story", "Summarize the FULL chronological story or visual progression from this FINAL structured timeline, not the earlier draft. Include opening, middle and ending without inventing motives, contact, causes, facial expressions or emotions absent from the beats. If an event's causality is unconfirmed, describe only visible states. Return JSON only: {\"summary\":string,\"pacing\":string|null}.\n" + json.dumps({"shots": analysis["shots"], "global": analysis["global"], "causal_link": motion["causal_link"]}, ensure_ascii=False), compiler=True, max_tokens=1500)
+    story = client.call("story", "Summarize the FULL chronological story or visual progression from this FINAL structured timeline, not the earlier draft. Include opening, middle and ending without inventing motives, contact, causes, facial expressions or emotions absent from the beats. If an event's causality is unconfirmed, describe only visible states. Return JSON only: {\"summary\":string,\"pacing\":string|null}.\n" + json.dumps({"shots": analysis["shots"], "global": analysis["global"], "causal_links": [m["causal_link"] for m in motions]}, ensure_ascii=False), compiler=True, max_tokens=1500)
     if not isinstance(story.get("summary"), str) or not story["summary"].strip() or "pacing" not in story:
         raise ValueError("Invalid final story")
     analysis["story"] = story
-    try:
-        clean_analysis(analysis, fs, fe, motion["causal_link"] == "observed", expr)
-    except ValueError:
-        neutralize(client, analysis, motion, fs, fe)
-        clean_analysis(analysis, fs, fe, motion["causal_link"] == "observed", expr)
-    if motion["causal_link"] == "unconfirmed":
+    for (fs, fe), m in zip(fs_list, motions):
+        try:
+            clean_analysis(analysis, fs, fe, m["causal_link"] == "observed", expr)
+        except ValueError:
+            neutralize(client, analysis, m, fs, fe)
+            clean_analysis(analysis, fs, fe, m["causal_link"] == "observed", expr)
+    if any(m["causal_link"] == "unconfirmed" for m in motions):
         bnd = "The focused action's exact causal mechanism is not directly confirmed by the reviewed frames."
         if bnd not in analysis["uncertainties"]:
             analysis["uncertainties"].append(bnd)
