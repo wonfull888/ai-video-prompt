@@ -24,8 +24,10 @@ description: "BestPrompts.app video-to-prompt pipeline as a reusable skill: reve
 - Agent 看到上述触发词即执行本 Skill 的脚本，无需追问：
 
 ```bash
-python3 scripts/reverse.py <视频路径> --out outputs/<任务名>
+python3 scripts/reverse_full.py <视频路径> --out outputs/<任务名>
 ```
+
+完整 PRO 链路（与 bestprompts 一致）：取证 → 初版分析（视频直传 Gemini）→ 焦点 motion 审查 → expression 审查 → 对账清洗 → 故事重写 → 翻译 → 完整渲染。`scripts/reverse.py` 仅为快速单次版。
 
 输出目录包含：`structured.json`、`prompt_zh.txt`、`prompt_en.txt`、`evidence_gallery.md`、`manifest.json`、抽帧 `frames/`。
 
