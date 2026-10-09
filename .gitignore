@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+outputs/
+jobs/
+*.mp4
+*.mov
+*.webm
