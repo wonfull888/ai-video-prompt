@@ -70,5 +70,5 @@ python3 scripts/reverse_full.py /path/to/video.mp4 --out outputs/demo
 - 默认最长 30 秒；想放宽自己改 `scripts/reverse_full.py` 里 `probe_video` 的时长限制（片子越长调用次数越多）。
 - 生成视频都是真金白银：使用前自己过一遍 prompt，把人名细节改成你项目的，反推的是还原参考，不是为你项目定制的。
 - 费用：每次运行约 6–10 次模型调用（视觉走 OpenRouter，文字走 DeepSeek），注意 Key 额度。
-- 开源许可证：MIT，见 [LICENSE](LICENSE)。
+- 开源许可证：仅限非商业使用，见 [LICENSE](LICENSE)，商用需书面授权。
 - Fork 自 [LunarXuan/video-prompt-reverse](https://github.com/LunarXuan/video-prompt-reverse)——skill 框架和模型适配器来自该项目，BestPrompts PRO 分析流水线是后加上去的。

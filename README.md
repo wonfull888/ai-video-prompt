@@ -71,5 +71,5 @@ The output folder's `prompt.md` is the deliverable, plus `structured.json` (stru
 - 30 seconds max by default; you can raise it yourself in `probe_video` inside `scripts/reverse_full.py` (longer videos cost more calls).
 - Before spending real money generating: read through the prompt once and fix names/details to your taste — the output restores the reference, it doesn't know your project's characters.
 - Cost: roughly 6–10 model calls per run (vision via OpenRouter, text via DeepSeek) — watch your key quotas.
-- License: MIT, see [LICENSE](LICENSE).
+- License: non-commercial use only, see [LICENSE](LICENSE). Commercial use needs written permission.
 - Forked from [LunarXuan/video-prompt-reverse](https://github.com/LunarXuan/video-prompt-reverse) — skill framework and adapters originate there; the BestPrompts PRO analysis pipeline was built on top.
