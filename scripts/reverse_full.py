@@ -428,10 +428,6 @@ def collect_texts(v: dict) -> dict[str, str]:
         if isinstance(x, str) and x.strip():
             t[k] = x
     add("story.summary", v["story"]["summary"]); add("story.pacing", v["story"]["pacing"])
-    def person_label(cid: str) -> str:
-        role = T(f"character.{cid}.role", "")
-        short = role.split("；")[0].split(";")[0].strip()[:10]
-        return f"{L['actor']} {cid}（{short}）" if short else f"{L['actor']} {cid}"
     g = v["global"]
     for f in ("category", "subject", "mood", "environment", "depth_layers", "time_weather", "lighting", "color", "style"):
         add(f"global.{f}", g.get(f))
@@ -468,6 +464,13 @@ def render_pro(v: dict, src: dict, tr: dict, lang: str):
         return f"{lbl}：{c}" if c else None
     def sec(name: str, rows) -> str:
         return "\n".join([f"【{name}】"] + [r for r in rows if r])
+    def person_label(cid: str) -> str:
+        if zh:
+            role = tr.get(f"character.{cid}.role", "")
+            short = role.split("；")[0].split(";")[0].strip()[:10]
+            return f"{L['actor']} {cid}（{short}）" if short else f"{L['actor']} {cid}"
+        role = next((c.get("role") or "" for c in v["global"]["characters"] if c["id"] == cid), "")
+        return f"{L['actor']} {cid} ({role})" if role else f"{L['actor']} {cid}"
     g = v["global"]
     pos = [sec(L["story"], [T("story.summary", v["story"]["summary"]), line(L["pacing"], T("story.pacing", v["story"]["pacing"]))]),
            sec(L["spec"], [f"{src['aspect_ratio']} · {src['duration_seconds']:.2f}s · {src['width']}×{src['height']}"]),
