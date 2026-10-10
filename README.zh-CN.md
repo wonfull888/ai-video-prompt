@@ -11,7 +11,7 @@
 
 ## 核心功能
 
-- 视觉模型（vision model）看完整视频，而不只是截图：切镜头、跟动作、记运镜、看表情，这是核心活，由 `google/gemini-3.8-flash`（走 OpenRouter）干。
+- 视觉模型（vision model）看完整视频，而不只是截图：切镜头、跟动作、记运镜、看表情，这是核心活，由 `google/gemini-3.8-flash`（走 OpenRouter）干。Gemini 是唯一能直接读视频文件的主流模型（OpenAI 和 Claude 只收图片，视频得先拆成帧），流水线建在它上面就是这个原因。
 - 文字模型（DeepSeek，可换）当审核：把容易看错的动作段逐帧复查，证据站不住的删掉，再翻成中文。
 - 默认输出中英双版 Markdown：`prompt.md` 中文在前、英文在后，另附 `prompt_zh.md` / `prompt_en.md`。
 - 人物不串位：每个动作阶段都带身份名（如`人物 P01（女招待）`），对账阶段锁定身份不许调换。
@@ -71,3 +71,4 @@ python3 scripts/reverse_full.py /path/to/video.mp4 --out outputs/demo
 - 生成视频都是真金白银：使用前自己过一遍 prompt，把人名细节改成你项目的，反推的是还原参考，不是为你项目定制的。
 - 费用：每次运行约 6–10 次模型调用（视觉走 OpenRouter，文字走 DeepSeek），注意 Key 额度。
 - 开源许可证：MIT，见 [LICENSE](LICENSE)。
+- Fork 自 [LunarXuan/video-prompt-reverse](https://github.com/LunarXuan/video-prompt-reverse)——skill 框架和模型适配器来自该项目，BestPrompts PRO 分析流水线是后加上去的。

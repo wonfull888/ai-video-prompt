@@ -11,7 +11,7 @@ Give it a reference video, get back a prompt that restores it as faithfully as p
 
 ## Features
 
-- A vision model watches the whole video (not just screenshots): it splits shots, tracks who does what, how the camera moves, and facial expressions — this is the core work, done by `google/gemini-3.8-flash` through OpenRouter.
+- A vision model watches the whole video (not just screenshots): it splits shots, tracks who does what, how the camera moves, and facial expressions — this is the core work, done by `google/gemini-3.8-flash` through OpenRouter. Gemini is the only major model that reads video files natively (OpenAI and Claude accept images only, so they'd need frame extraction first) — that's why the pipeline is built on it.
 - A text model then double-checks the draft: it re-examines the tricky action segments frame by frame, deletes anything the frames can't prove, and translates everything into Chinese (done by DeepSeek; swappable via env vars).
 - Bilingual Markdown by default: `prompt.md` ships Chinese first, English second, plus split `prompt_zh.md` / `prompt_en.md`.
 - Characters keep readable names in every beat (e.g. `Character P01 (barmaid)`), and identities are locked so the model can't swap people mid-review.
@@ -72,3 +72,4 @@ The output folder's `prompt.md` is the deliverable, plus `structured.json` (stru
 - Before spending real money generating: read through the prompt once and fix names/details to your taste — the output restores the reference, it doesn't know your project's characters.
 - Cost: roughly 6–10 model calls per run (vision via OpenRouter, text via DeepSeek) — watch your key quotas.
 - License: MIT, see [LICENSE](LICENSE).
+- Forked from [LunarXuan/video-prompt-reverse](https://github.com/LunarXuan/video-prompt-reverse) — skill framework and adapters originate there; the BestPrompts PRO analysis pipeline was built on top.
