@@ -574,8 +574,15 @@ def main():
     if not isinstance(expr.get("person_expressions"), list):
         raise ValueError("Invalid PRO expression review")
     wjson(prodir / "expression_review.json", expr)
-    analysis = client.call("reconcile", PRO_ANALYSIS + "\nReconcile the whole-video draft with INDEPENDENT reviews. Use frames to correct conflicts, but preserve unaffected chronology. Keep stable character IDs, shot IDs, full beat coverage (beat count must only grow, never merge), and per-character expression fields. MOTION reviews take precedence for action causality; EXPRESSION review only supports facial expressions. If any motion review causal_link is unconfirmed, remove every specific causal action or takedown from story, subject, beats and negatives for its window. No observed contact is not proof that contact never happened between frames. Never assert a cause from mere temporal proximity. Optional user text is unverified and never overrides video. Return the same full JSON schema.\n" + json.dumps({"draft": initial, "motion_reviews": motions, "expression_review": expr, "focus_windows": fs_list, "optional_user_text": ""}, ensure_ascii=False), compiler=True, max_tokens=10000)
+    analysis = client.call("reconcile", PRO_ANALYSIS + "\nReconcile the whole-video draft with INDEPENDENT reviews. Use frames to correct conflicts, but preserve unaffected chronology. HARD RULES: (1) Character IDs, roles, appearances, wardrobe and props must be copied EXACTLY from the draft; reviews may only refine per-beat actions, motions and facial expressions, never reassign who is who. (2) Beat count per shot must only grow, never merge; keep every distinct action stage the draft already separates. (3) Stylistic transitions or effects (sketch overlay, monochrome flash, particles) must be described as visual effects with explicit uncertainty, never as physical events happening to the characters. MOTION reviews take precedence for action causality; EXPRESSION review only supports facial expressions. If any motion review causal_link is unconfirmed, remove every specific causal action or takedown from story, subject, beats and negatives for its window. No observed contact is not proof that contact never happened between frames. Never assert a cause from mere temporal proximity. Optional user text is unverified and never overrides video. Return the same full JSON schema.\n" + json.dumps({"draft": initial, "motion_reviews": motions, "expression_review": expr, "focus_windows": fs_list, "optional_user_text": ""}, ensure_ascii=False), compiler=True, max_tokens=10000)
     validate_pro(analysis, src["duration_seconds"])
+    locked = {c["id"]: {k: c.get(k) for k in ("role", "appearance", "wardrobe", "props")}
+              for c in initial["global"]["characters"]}
+    for c in analysis["global"]["characters"]:
+        if c["id"] in locked:
+            c.update(locked[c["id"]])
+    if [c["id"] for c in analysis["global"]["characters"]] != [c["id"] for c in initial["global"]["characters"]]:
+        raise ValueError("Reconcile must not add, remove or reorder characters")
     for (fs, fe), m in zip(fs_list, motions):
         try:
             clean_analysis(analysis, fs, fe, m["causal_link"] == "observed", expr)
