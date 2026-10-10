@@ -625,6 +625,8 @@ def main():
             f"{L['positive']}\n\n{prompts[f'{lang}_positive']}\n\n{L['negative']}\n\n{prompts[f'{lang}_negative']}\n", encoding="utf-8")
     (out / "prompt_zh.md").write_text(render_markdown(prompts, "zh"), encoding="utf-8")
     (out / "prompt_en.md").write_text(render_markdown(prompts, "en"), encoding="utf-8")
+    combined = (render_markdown(prompts, "zh") + "\n---\n\n" + render_markdown(prompts, "en"))
+    (out / "prompt.md").write_text(combined, encoding="utf-8")
     sel = select_frames(src, analysis)
     (out / "evidence_gallery.md").write_text("\n\n".join(
         f"{next((s for s in analysis['shots'] if s['start'] <= f['timestamp'] <= s['end']), analysis['shots'][-1])['id']} · {f['timestamp']}s\n\n![{f['id']}]({f['path']})" for f in sel) + "\n", encoding="utf-8")
