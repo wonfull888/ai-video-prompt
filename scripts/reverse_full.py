@@ -196,7 +196,7 @@ class Client:
         t0 = time.monotonic()
         req = urllib.request.Request(base.rstrip("/") + "/chat/completions", data=json.dumps(payload).encode(),
             headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json",
-                     "HTTP-Referer": "https://bestprompts.app", "X-Title": "video-prompt-reverse-skill"})
+                     "HTTP-Referer": "https://bestprompts.app", "X-Title": "ai-video-prompt-skill"})
         try:
             with urllib.request.urlopen(req, timeout=300) as r:
                 raw = json.load(r)

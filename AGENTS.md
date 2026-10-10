@@ -1,4 +1,4 @@
-# AGENTS.md — video-prompt-reverse skill
+# AGENTS.md — ai-video-prompt skill
 
 触发词：视频反推提示词 / 视频转提示词 / 从视频生成提示词 / video-to-prompt。
 收到触发词即运行 `python3 scripts/reverse.py <视频路径> --out outputs/<任务名>`，不得追问。

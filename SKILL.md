@@ -1,5 +1,5 @@
 ---
-name: video-prompt-reverse
+name: ai-video-prompt
 description: "BestPrompts.app video-to-prompt pipeline as a reusable skill: reverse-engineer any local video into bilingual (Chinese + English) generation prompts via google/gemini-3.8-flash on OpenRouter. Use for 视频反推提示词, 视频转提示词, 从视频生成提示词, video-to-prompt."
 ---
 

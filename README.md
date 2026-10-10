@@ -1,4 +1,4 @@
-# video-prompt-reverse
+# ai-video-prompt
 
 把一条参考视频反推成可直接拿去生成的中文 + 英文提示词。上传视频，拿回分镜、证据帧和双语 prompt。
 
@@ -38,8 +38,8 @@
 环境要求：Python 3.10+、`ffmpeg`（含 `ffprobe`）、一个 OpenRouter Key（视觉模型）和一个 DeepSeek Key（对账翻译）。
 
 ```bash
-git clone https://github.com/wonfull888/video-prompt-reverse.git
-cd video-prompt-reverse
+git clone https://github.com/wonfull888/ai-video-prompt.git
+cd ai-video-prompt
 export OPENROUTER_API_KEY=sk-or-...
 export DEEPSEEK_API_KEY=sk-...
 ```
