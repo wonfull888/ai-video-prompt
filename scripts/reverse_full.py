@@ -428,6 +428,10 @@ def collect_texts(v: dict) -> dict[str, str]:
         if isinstance(x, str) and x.strip():
             t[k] = x
     add("story.summary", v["story"]["summary"]); add("story.pacing", v["story"]["pacing"])
+    def person_label(cid: str) -> str:
+        role = T(f"character.{cid}.role", "")
+        short = role.split("；")[0].split(";")[0].strip()[:10]
+        return f"{L['actor']} {cid}（{short}）" if short else f"{L['actor']} {cid}"
     g = v["global"]
     for f in ("category", "subject", "mood", "environment", "depth_layers", "time_weather", "lighting", "color", "style"):
         add(f"global.{f}", g.get(f))
@@ -490,7 +494,7 @@ def render_pro(v: dict, src: dict, tr: dict, lang: str):
                 det = [line(L[lbl], T(f"shot.{s['id']}.beat.{i}.person.{p['character_id']}.{f}", p.get(f)))
                        for lbl, f in (("action", "action"), ("motion", "motion"),
                                        ("expression", "visible_expression"), ("emotion", "inferred_emotion"))]
-                rows.append(f"  {L['actor']} {p['character_id']}：" + "；".join(x for x in det if x))
+                rows.append(f"  {person_label(p['character_id'])}：" + "；".join(x for x in det if x))
             ch = T(f"shot.{s['id']}.beat.{i}.environment_change", b.get("environment_change"))
             if ch:
                 rows.append(f"  {L['environment_change']}：{ch}")
