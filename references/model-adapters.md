@@ -44,6 +44,13 @@ These profiles are compilation guidance, not permanent API truth. Before emittin
 - Official prompt-extension guidance: https://github.com/Wan-Video/Wan2.2/blob/main/wan/utils/system_prompt.py
 - Official inference parameters: https://github.com/Wan-Video/Wan2.2/blob/main/generate.py
 
+## Seedance
+
+- Seedance (2.0 / 2.5) accepts natural-language prompts in Chinese or English; keep the user's language as the primary copy surface.
+- Lead with subject + action + camera movement + atmosphere, in chronological order; multi-shot references should stay shot-separated with time ranges.
+- For dialogue/lip-sync or precise motion, add short explicit action beats rather than adjectives; use reference images for identity continuity.
+- Do not emit API parameters (duration, resolution, seed) until the exact Seedance endpoint and model version are verified; capabilities differ across versions and providers.
+
 ## Shared negative constraints
 
 For every target, render the selected constraints in both Chinese and English and keep them semantically aligned. Place each negative prompt in the same language-specific block as its positive prompt; keep the Chinese and English blocks separate.
